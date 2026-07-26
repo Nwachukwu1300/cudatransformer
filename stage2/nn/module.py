@@ -35,8 +35,9 @@ class Module:
             yield param
 
         # Recursively yield parameters from submodules
+        # Use hasattr check instead of isinstance for compatibility with importlib
         for module in self._modules:
-            if isinstance(module, Module):
+            if hasattr(module, 'parameters'):
                 yield from module.parameters()
 
     def register_parameter(self, name: str, param: Tensor):

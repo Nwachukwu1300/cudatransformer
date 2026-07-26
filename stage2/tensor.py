@@ -335,6 +335,59 @@ class Tensor:
         """Negation: -self"""
         return self * -1
 
+    def transpose(self, dim0: int, dim1: int) -> 'Tensor':
+        """
+        Transpose two dimensions.
+
+        Args:
+            dim0: First dimension to swap
+            dim1: Second dimension to swap
+
+        Returns:
+            Transposed tensor
+        """
+        axes = list(range(self.ndim))
+        axes[dim0], axes[dim1] = axes[dim1], axes[dim0]
+
+        out = Tensor(np.transpose(self.data, axes),
+                     requires_grad=self.requires_grad,
+                     _children=(self,), _op='transpose')
+
+        def _backward():
+            if self.requires_grad:
+                if self.grad is None:
+                    self.grad = np.zeros_like(self.data)
+                # Reverse the transpose
+                self.grad += np.transpose(out.grad, axes)
+
+        out._backward = _backward
+        return out
+
+    def permute(self, *dims) -> 'Tensor':
+        """
+        Permute tensor dimensions.
+
+        Args:
+            dims: Desired ordering of dimensions
+
+        Returns:
+            Permuted tensor
+        """
+        out = Tensor(np.transpose(self.data, dims),
+                     requires_grad=self.requires_grad,
+                     _children=(self,), _op='permute')
+
+        def _backward():
+            if self.requires_grad:
+                if self.grad is None:
+                    self.grad = np.zeros_like(self.data)
+                # Inverse permutation
+                inv_dims = np.argsort(dims)
+                self.grad += np.transpose(out.grad, inv_dims)
+
+        out._backward = _backward
+        return out
+
 
 # ================================
 # Context Manager for no_grad
