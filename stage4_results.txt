@@ -1,0 +1,63 @@
+======================================================================
+Stage 4 Training Results: Tiny Language Model
+CUDA Transformer Engine
+======================================================================
+
+Model Architecture:
+  Vocab size: 2000
+  Max seq len: 64
+  Embed dim: 128
+  Num layers: 4
+  Num heads: 4
+  FF hidden: 512
+  Total parameters: 1,311,488
+
+Dataset:
+  Source: TinyStories (Eldan & Li, 2023)
+  Used: First 5MB subset of training data
+  Total tokens: 1255379
+  Train sequences: 35306
+  Val sequences: 3923
+
+Training Progress:
+  Epoch   1: Train Loss=3.4039, Val Loss=2.8684
+  Epoch   2: Train Loss=2.6459, Val Loss=2.6293
+  Epoch   3: Train Loss=2.4195, Val Loss=2.5257
+  Epoch   4: Train Loss=2.2781, Val Loss=2.4782
+  Epoch   5: Train Loss=2.1765, Val Loss=2.4529
+  Epoch   6: Train Loss=2.0958, Val Loss=2.4494
+  Epoch   7: Train Loss=2.0293, Val Loss=2.4621
+  Epoch   8: Train Loss=1.9717, Val Loss=2.4787
+  Epoch   9: Train Loss=1.9199, Val Loss=2.4972
+  Epoch  10: Train Loss=1.8734, Val Loss=2.5148
+  Epoch  11: Train Loss=1.8310, Val Loss=2.5364
+  Epoch  12: Train Loss=1.7927, Val Loss=2.5561
+  Epoch  13: Train Loss=1.7572, Val Loss=2.5960
+  Epoch  14: Train Loss=1.7235, Val Loss=2.6298
+  Epoch  15: Train Loss=1.6927, Val Loss=2.6557
+
+Final Results:
+  Final Train Loss: 1.6927
+  Final Val Loss: 2.6557
+  Best Val Loss: 2.4494
+  Training Time: 7442.3 seconds
+
+Example Generations:
+--------------------------------------------------
+
+Prompt: "Once upon a time"
+Generated: "once upon a time, there was a little girl named sue. sue loved to play with her toys. one day, sue' s friend, tom, came to play"
+
+Prompt: "The king walked into"
+Generated: "the king walked into the forest. he was not scared of the lion. he was too scared to go away. the king saw the queen and wanted the best. he"
+
+Prompt: "A little girl named"
+Generated: "a little girl named ellie. ellie had a lot of value of fun. one day, ellie asked betty," do you want to play with me?" said"
+
+Prompt: "The cat sat"
+Generated: "the cat sat down and looked at the cat. the cat said," i have your pretty red ball!" the cat smiled and said," thank you,"
+
+Prompt: "One day a"
+Generated: "one day a big bear came by. the bear said," hello, mr. bear! i can help you. i will come with you. i am not"
+
+======================================================================

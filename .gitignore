@@ -1,0 +1,23 @@
+# Data files (large)
+/data/
+
+# Checkpoints
+stage4/checkpoints/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environments
+venv/
+env/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
