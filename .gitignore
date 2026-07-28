@@ -1,8 +1,10 @@
 # Data files (large)
 /data/
+stage5/data/
 
 # Checkpoints
 stage4/checkpoints/
+stage5/checkpoints/
 
 # Python
 __pycache__/

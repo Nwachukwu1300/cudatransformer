@@ -1,0 +1,134 @@
+======================================================================
+Stage 5: Sequential Recommender Training
+CUDA Transformer Engine - The Recommendation Pivot
+======================================================================
+
+NOTE: The transformer architecture is UNCHANGED from Stage 3/4.
+      We reuse DecoderLanguageModel exactly; only the vocabulary and
+      data differ -- movie item IDs replace word tokens.
+
+Loading MovieLens 1M...
+  Interactions: 1,000,209
+  Movies with titles: 3,883
+  Users: 6,040
+  Built item vocab with vocab_size=3710 (3706 movies + 4 special tokens)
+  Created 25,182 training sequences (per-user windows)
+  Train sequences: 22,663
+  Val sequences: 2,519
+
+Creating model (DecoderLanguageModel, unchanged from Stage 3/4)...
+DecoderLanguageModel(
+  vocab_size=3710
+  max_seq_len=64
+  embed_dim=128
+  num_layers=4
+  num_heads=4
+  ff_hidden_dim=512
+  Total Parameters: 1,749,248
+)
+
+Training Configuration:
+  Batch size: 16
+  Epochs: 15
+  Learning rate: 0.001
+
+Starting training...
+----------------------------------------------------------------------
+Epoch   1: Train Loss=6.4633, Val Loss=5.7665  (432.2s)
+Epoch   2: Train Loss=5.5655, Val Loss=5.4616  (486.6s)
+Epoch   3: Train Loss=5.3403, Val Loss=5.3292  (475.3s)
+Epoch   4: Train Loss=5.1956, Val Loss=5.2362  (444.2s)
+Epoch   5: Train Loss=5.0751, Val Loss=5.1671  (458.1s)
+Epoch   6: Train Loss=4.9681, Val Loss=5.1275  (422.2s)
+Epoch   7: Train Loss=4.8687, Val Loss=5.0965  (428.3s)
+Epoch   8: Train Loss=4.7723, Val Loss=5.0707  (420.2s)
+Epoch   9: Train Loss=4.6790, Val Loss=5.0541  (418.8s)
+Epoch  10: Train Loss=4.5885, Val Loss=5.0370  (418.5s)
+Epoch  11: Train Loss=4.5018, Val Loss=5.0402  (438.5s)
+Epoch  12: Train Loss=4.4195, Val Loss=5.0527  (434.9s)
+Epoch  13: Train Loss=4.3428, Val Loss=5.0352  (412.4s)
+Epoch  14: Train Loss=4.2693, Val Loss=5.0328  (418.0s)
+Epoch  15: Train Loss=4.2044, Val Loss=5.0346  (428.5s)
+
+======================================================================
+Training Complete!
+======================================================================
+Final Train Loss: 4.2044
+Final Val Loss: 5.0346
+Best Val Loss: 5.0328
+Training Time: 6536.8 seconds
+
+Saving checkpoint...
+  Saved weights to /Users/mmesoma/Desktop/cudatransformer/stage5/checkpoints/recommender_weights.npz
+  Saved config to /Users/mmesoma/Desktop/cudatransformer/stage5/checkpoints/recommender_config.json
+  Saved tokenizer to /Users/mmesoma/Desktop/cudatransformer/stage5/checkpoints/recommender_tokenizer.json
+  Saved training info to /Users/mmesoma/Desktop/cudatransformer/stage5/checkpoints/recommender_training_info.json
+
+Generating example predictions...
+----------------------------------------------------------------------
+
+User 1 (history of 53 movies)
+  Recent history:
+    - Bug's Life, A (1998)
+    - Antz (1998)
+    - Hunchback of Notre Dame, The (1996)
+    - Hercules (1997)
+    - Mulan (1998)
+  Top-5 predicted next movies:
+    * Lion King, The (1994)  (score=11.68)
+    * Sword in the Stone, The (1963)  (score=10.02)
+    * Swan Princess, The (1994)  (score=9.51)
+    * Madeline (1998)  (score=9.29)
+    * George of the Jungle (1997)  (score=9.21)
+  Actual next movie: Pocahontas (1995)
+
+User 2 (history of 129 movies)
+  Recent history:
+    - Outbreak (1995)
+    - Broken Arrow (1996)
+    - Jackal, The (1997)
+    - Cliffhanger (1993)
+    - Lost World: Jurassic Park, The (1997)
+  Top-5 predicted next movies:
+    * Armageddon (1998)  (score=9.33)
+    * Waterworld (1995)  (score=9.01)
+    * Batman Forever (1995)  (score=8.50)
+    * Days of Thunder (1990)  (score=8.48)
+    * Chain Reaction (1996)  (score=8.48)
+  Actual next movie: Armageddon (1998)
+
+User 3 (history of 51 movies)
+  Recent history:
+    - Full Monty, The (1997)
+    - Bug's Life, A (1998)
+    - Caddyshack (1980)
+    - Happy Gilmore (1996)
+    - Naked Gun: From the Files of Police Squad!, The (1988)
+  Top-5 predicted next movies:
+    * Beetlejuice (1988)  (score=10.10)
+    * Ferris Bueller's Day Off (1986)  (score=8.84)
+    * Grosse Pointe Blank (1997)  (score=8.81)
+    * Austin Powers: International Man of Mystery (1997)  (score=8.79)
+    * Airplane! (1980)  (score=8.70)
+  Actual next movie: Little Mermaid, The (1989)
+
+User 4 (history of 21 movies)
+  Recent history:
+    - Thelma & Louise (1991)
+    - Mad Max (1979)
+    - Terminator, The (1984)
+    - Fistful of Dollars, A (1964)
+    - Die Hard (1988)
+  Top-5 predicted next movies:
+    * Aliens (1986)  (score=10.12)
+    * Dirty Dozen, The (1967)  (score=9.80)
+    * Full Metal Jacket (1987)  (score=9.75)
+    * Rocky (1976)  (score=9.34)
+    * Fugitive, The (1993)  (score=9.26)
+  Actual next movie: Rocky (1976)
+
+Results saved to /Users/mmesoma/Desktop/cudatransformer/stage5_results.txt
+
+Stage 5 Complete!
+Checkpoint saved to: /Users/mmesoma/Desktop/cudatransformer/stage5/checkpoints/recommender_*
+Run 'python3 recommend.py' to get predictions from the trained model.
