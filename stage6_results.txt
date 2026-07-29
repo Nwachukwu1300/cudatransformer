@@ -1,0 +1,81 @@
+======================================================================
+Stage 6 Benchmark Results: Simplified Tiled Attention
+CUDA Transformer Engine - Simplified Tiled Attention
+======================================================================
+
+CUDA Available: False
+NumPy Version: 2.2.6
+Platform: darwin
+
+The CUDA tiled-attention kernel (stage6/kernels/tiled_attention.cu)
+cannot compile or run on this machine (no nvcc / NVIDIA GPU). GPU
+columns read "N/A (Colab)"; run stage6/colab_benchmark.py on a CUDA
+GPU to fill them in (see stage6/COLAB_README.md). Every correctness,
+CPU-time and peak-memory number below is really measured, not estimated.
+
+----------------------------------------------------------------------
+1. Correctness: Python tiled attention vs Stage 3 attention
+----------------------------------------------------------------------
+Reference : stage3/nn/attention.py :: scaled_dot_product_attention
+Check     : np.testing.assert_allclose(rtol=1e-4, atol=1e-6)
+            (differences are float32 reduction-order noise, ~1e-7)
+
+       Shape (B,H,S,d)    mask      max|diff|   result
+------------------------------------------------------------
+        (2, 4, 64, 16)  causal      4.768e-07     PASS
+       (2, 4, 128, 32)  causal      3.576e-07     PASS
+       (1, 8, 256, 64)  causal      2.384e-07     PASS
+       (2, 2, 512, 32)  causal      3.576e-07     PASS
+       (2, 4, 128, 32)    none      2.980e-07     PASS
+
+Verification:
+  All shapes match Stage 3 within rtol=1e-4: YES
+
+----------------------------------------------------------------------
+2. Execution time (CPU): Python tiled vs Stage 3 dense
+----------------------------------------------------------------------
+Config: batch=2, heads=8, head_dim=64, causal mask, block=64
+Harness: warmup=3, runs=10, time.perf_counter (same as Stage 1)
+
+    SeqLen     Stage3 (ms)      Tiled (ms)   CUDA GPU (ms)     vs Std
+----------------------------------------------------------------------
+        64          0.8181          0.7984     N/A (Colab)      1.02x
+       128          4.2875          2.8973     N/A (Colab)      1.48x
+       256         14.9333         10.9764     N/A (Colab)      1.36x
+       512         44.3973         41.2303     N/A (Colab)      1.08x
+      1024        139.1859        165.4978     N/A (Colab)      0.84x
+
+Note: On CPU the two are close. Tiled avoids the large O(S^2) score
+allocation, so it is competitive (often a touch faster) at small/medium
+S, and falls behind only at large S where the Python per-tile loop
+overhead dominates NumPy's single fused matmul. On CPU the dependable
+win is MEMORY (section 3); the SPEED win needs the CUDA kernel keeping
+tiles in shared memory (run on Colab to populate the CUDA GPU column).
+
+----------------------------------------------------------------------
+3. Peak memory: attention score-matrix intermediate
+----------------------------------------------------------------------
+Dense attention materializes the full (B,H,S,S) score matrix (and
+softmax keeps ~2 live copies: exp and probs). Tiled attention only
+ever holds one (block x block) score tile plus O(S) running summaries.
+
+(a) Analytical score-matrix bytes  (batch=2, heads=8, block=64, float32)
+    SeqLen    Standard scores     Tiled tile    Reduction
+----------------------------------------------------------
+        64           256.0 KB        16.0 KB          16x
+       128             1.0 MB        16.0 KB          64x
+       256             4.0 MB        16.0 KB         256x
+       512            16.0 MB        16.0 KB        1024x
+      1024            64.0 MB        16.0 KB        4096x
+      2048           256.0 MB        16.0 KB       16384x
+
+(b) Measured peak process RSS  (batch=1, heads=1, head_dim=64; one subprocess per method)
+    SeqLen     Standard RSS      Tiled RSS    Reduction
+------------------------------------------------------
+      2048         176.3 MB       120.8 MB        1.46x
+      4096         572.1 MB       376.3 MB        1.52x
+
+======================================================================
+Correctness PASSED. CPU benchmark saved. Run stage6/colab_benchmark.py
+on a GPU to fill the CUDA GPU column. Stage 6 (local part) complete.
+======================================================================
