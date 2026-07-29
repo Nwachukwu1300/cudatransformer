@@ -1,0 +1,56 @@
+======================================================================
+Stage 6 GPU Benchmark Results: Simplified Tiled Attention
+CUDA Transformer Engine - Simplified Tiled Attention (GPU / Colab)
+======================================================================
+
+Device: Tesla T4
+Environment: Google Colab, Python 3.12, nvcc -O3 --use_fast_math
+Produced by: stage6/colab_benchmark.py  (run 2026-07-29)
+
+----------------------------------------------------------------------
+1. Correctness: tiled CUDA kernel vs Stage 3 attention
+----------------------------------------------------------------------
+Check: np.testing.assert_allclose(rtol=1e-4, atol=1e-6)
+
+       Shape (B,H,S,d)    mask      max|diff|   result
+------------------------------------------------------------
+        (2, 4, 64, 16)  causal      4.768e-07     PASS
+       (2, 4, 128, 32)  causal      4.768e-07     PASS
+       (1, 8, 256, 64)  causal      4.768e-07     PASS
+       (2, 2, 512, 32)  causal      4.768e-07     PASS
+       (2, 4, 128, 32)    none      5.364e-07     PASS
+
+Verification:
+  GPU kernel matches Stage 3 within rtol=1e-4: YES
+
+----------------------------------------------------------------------
+2. Execution time: tiled CUDA kernel (GPU) vs Stage 3 dense (CPU)
+----------------------------------------------------------------------
+Config: batch=2, heads=8, head_dim=64, causal mask
+Harness: warmup=3, runs=10 (GPU time includes H2D/D2H transfers)
+
+    SeqLen    Stage3 CPU (ms)     Tiled GPU (ms)      Speedup
+--------------------------------------------------------------
+        64             2.1503             0.8600        2.50x
+       128             8.5391             1.6958        5.04x
+       256            30.6944             3.9016        7.87x
+       512           117.0514            10.3924       11.26x
+      1024           588.5487            22.8946       25.71x
+
+----------------------------------------------------------------------
+3. GPU global memory allocated
+----------------------------------------------------------------------
+The tiled kernel allocates only Q,K,V,O. A dense attention would also
+need the (B,H,S,S) scores and probs buffers -- the O(S^2) cost tiling avoids.
+
+    SeqLen    Tiled (Q,K,V,O)    Dense (+S^2 x2)    Extra avoided
+------------------------------------------------------------------
+        64             1.0 MB             1.5 MB         512.0 KB
+       128             2.0 MB             4.0 MB           2.0 MB
+       256             4.0 MB            12.0 MB           8.0 MB
+       512             8.0 MB            40.0 MB          32.0 MB
+      1024            16.0 MB           144.0 MB         128.0 MB
+
+======================================================================
+Stage 6 GPU benchmark complete.
+======================================================================
