@@ -1,0 +1,21 @@
+# Stage 7 (JAX/Flax) dependencies -- separate from the Stage 1-6 project, which
+# is NumPy + CUDA only. Install these for Stage 7 alone.
+#
+# Local (CPU, Apple Silicon or any machine) -- enough for the smoke test:
+#     python3 -m pip install jax jaxlib flax optax
+#
+# Google Colab GPU runtime: JAX with CUDA is already preinstalled; just add:
+#     pip install -U flax optax
+#
+# Google Colab TPU runtime (jax-on-TPU can be version-sensitive):
+#     pip install -U "jax[tpu]" flax optax
+#   (if devices don't show up, restart the runtime after install)
+#
+# Kaggle TPU v3-8 fallback:
+#     pip install -U "jax[tpu]" flax optax
+#
+# Pinning is intentionally loose; the code uses only stable jax/flax/optax APIs.
+jax
+jaxlib
+flax
+optax

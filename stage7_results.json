@@ -1,0 +1,18 @@
+{
+  "cpu-smoke": {
+    "tag": "cpu-smoke",
+    "device_kind": "cpu [smoke]",
+    "train_time_s": 3.321166791021824,
+    "steps_per_sec": 30.10990001174647,
+    "peak_mem_bytes": null,
+    "cost_usd": null,
+    "rate_label": null,
+    "final_train_loss": 4.986663818359375,
+    "final_val_loss": 4.934839248657227,
+    "initial_loss": 8.58835506439209,
+    "total_steps": 100,
+    "epochs": null,
+    "batch_size": 16,
+    "note": "smoke test: correctness only (loss must drop); NOT a speed benchmark"
+  }
+}
