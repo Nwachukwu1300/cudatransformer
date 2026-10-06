@@ -14,5 +14,21 @@
     "epochs": null,
     "batch_size": 16,
     "note": "smoke test: correctness only (loss must drop); NOT a speed benchmark"
+  },
+  "gpu": {
+    "tag": "gpu",
+    "device_kind": "Tesla T4",
+    "train_time_s": 149.55574720100003,
+    "steps_per_sec": 221.25528854152077,
+    "peak_mem_bytes": 146973696,
+    "cost_usd": 0.014540142088986113,
+    "rate_label": "GCP on-demand T4",
+    "final_train_loss": 1.7045764923095703,
+    "final_val_loss": 2.6361324787139893,
+    "initial_loss": 8.63224983215332,
+    "total_steps": 33090,
+    "epochs": 15,
+    "batch_size": 16,
+    "note": "JAX/Flax reimplementation of Stage 3 architecture; Stage 4 recipe"
   }
 }

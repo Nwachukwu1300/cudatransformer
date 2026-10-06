@@ -24,3 +24,9 @@ env/
 # OS
 .DS_Store
 .venv_stage7/
+
+# Playwright MCP browser automation artifacts
+.playwright-mcp/
+
+# Local data slice made for uploading to Colab (not meant to be committed)
+tinystories_train_5mb.txt

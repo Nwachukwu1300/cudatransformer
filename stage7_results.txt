@@ -17,6 +17,7 @@ Comparison
 Device                          Time   Steps/s    Peak mem   Est cost   Train     Val
 ------------------------------------------------------------------------------
 cpu [smoke]                     3.3s      30.1         N/A        N/A   4.987   4.935
+Tesla T4                      149.6s     221.3    140.2 MB    $0.0145   1.705   2.636
 CPU (Stage 4 NumPy engine)  124.0min       N/A         N/A        N/A   1.693   2.656
 
 Cost basis: estimated from public GCP on-demand pricing (~2024-2025); a real
@@ -24,6 +25,7 @@ Colab/Kaggle run may cost $0 (free tier). cost = train_hours x rate.
 
 Verification (did both actually train?):
   cpu [smoke]                    loss 8.58835506439209 -> 4.986663818359375  trained: YES
+  Tesla T4                       loss 8.63224983215332 -> 1.7045764923095703  trained: YES
   (Stage 4 target for a full 15-epoch run: train ~1.69 / val ~2.66)
 
 Caveats:
@@ -35,5 +37,5 @@ Caveats:
   - GPU/TPU 'Time' includes the one-time JIT compile.
 
 ==============================================================================
-Pending: run stage7/train_benchmark.py on Colab GPU, TPU runtime(s) to fill the remaining row(s). See stage7/COLAB_README.md.
+Pending: run stage7/train_benchmark.py on Colab TPU runtime(s) to fill the remaining row(s). See stage7/COLAB_README.md.
 ==============================================================================
