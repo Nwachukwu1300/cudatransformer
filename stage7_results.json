@@ -30,5 +30,21 @@
     "epochs": 15,
     "batch_size": 16,
     "note": "JAX/Flax reimplementation of Stage 3 architecture; Stage 4 recipe"
+  },
+  "tpu": {
+    "tag": "tpu",
+    "device_kind": "TPU v5 lite",
+    "train_time_s": 57.96675556700029,
+    "steps_per_sec": 570.8444379253425,
+    "peak_mem_bytes": 95225344,
+    "cost_usd": 0.019322251855666762,
+    "rate_label": "GCP on-demand TPU v5e",
+    "final_train_loss": 1.705125331878662,
+    "final_val_loss": 2.6380295753479004,
+    "initial_loss": 8.632137298583984,
+    "total_steps": 33090,
+    "epochs": 15,
+    "batch_size": 16,
+    "note": "JAX/Flax reimplementation of Stage 3 architecture; Stage 4 recipe"
   }
 }
