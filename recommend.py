@@ -6,6 +6,10 @@ the next movie they're likely to pick. This is the recommendation analogue of St
 4's generate.py -- same model, same forward pass, same "read the logits at the last
 position" mechanic. The only difference is that the vocabulary maps movie IDs (not
 words), so the predicted token IDs decode back to movies.
+
+This is a thin CLI wrapper -- the actual loading and prediction logic lives in
+stage5/inference.py, which is also what webapp/backend/app.py imports, so there
+is exactly one source of truth shared by both the CLI and the web app.
 """
 
 import argparse
@@ -13,18 +17,8 @@ import importlib.util
 import os
 import sys
 
-import numpy as np
-
 _base_path = os.path.dirname(os.path.abspath(__file__))
-_stage2_path = os.path.join(_base_path, "stage2")
-_stage3_path = os.path.join(_base_path, "stage3")
-_stage4_path = os.path.join(_base_path, "stage4")
 _stage5_path = os.path.join(_base_path, "stage5")
-
-if _stage2_path not in sys.path:
-    sys.path.insert(0, _stage2_path)
-
-from tensor import Tensor  # noqa: E402
 
 
 def _load_module(base_path, rel_path, name):
@@ -35,54 +29,12 @@ def _load_module(base_path, rel_path, name):
     return mod
 
 
-# Same transformer model as Stage 4.
-_decoder_mod = _load_module(_stage3_path, "models/decoder_lm.py", "stage3_decoder")
-DecoderLanguageModel = _decoder_mod.DecoderLanguageModel
-
-# Reused Stage 4 checkpoint loader.
-_checkpoint_mod = _load_module(_stage4_path, "utils/checkpoint.py", "stage4_checkpoint")
-load_checkpoint = _checkpoint_mod.load_checkpoint
-
-# Stage 5 item vocabulary + data helpers.
-_item_vocab_mod = _load_module(_stage5_path, "utils/item_vocab.py", "stage5_item_vocab")
-ItemVocab = _item_vocab_mod.ItemVocab
-_ml_data_mod = _load_module(_stage5_path, "utils/data.py", "stage5_data")
-
-
-def predict_next_items(model, vocab, history_movie_ids, top_k=5):
-    """
-    Predict the next items for a user given their movie history.
-
-    Encode the history, run one forward pass, read the logits at the last position,
-    and return the highest-scoring items (excluding movies already seen and specials).
-    """
-    token_ids = vocab.encode(history_movie_ids, add_bos=False, add_eos=False)
-    if len(token_ids) == 0:
-        return []
-    if len(token_ids) > model.max_seq_len:
-        token_ids = token_ids[-model.max_seq_len:]
-
-    input_array = np.array([token_ids], dtype=np.int64)
-    logits = model(input_array)
-    last_logits = logits.data[0, -1, :]
-
-    seen = set(vocab.encode(history_movie_ids))
-    special = {vocab.get_pad_id(), vocab.get_bos_id(),
-               vocab.get_eos_id(), vocab.token_to_id[vocab.UNK_TOKEN]}
-
-    ranked = np.argsort(last_logits)[::-1]
-    results = []
-    for token_id in ranked:
-        token_id = int(token_id)
-        if token_id in special or token_id in seen:
-            continue
-        movie_id = vocab.id_to_movie(token_id)
-        if movie_id is None:
-            continue
-        results.append((movie_id, float(last_logits[token_id])))
-        if len(results) >= top_k:
-            break
-    return results
+_inference_mod = _load_module(_stage5_path, "inference.py", "stage5_inference")
+load_recommender = _inference_mod.load_recommender
+predict_next_items = _inference_mod.predict_next_items
+load_movie_titles = _inference_mod.load_movie_titles
+load_movielens_ratings = _inference_mod.load_movielens_ratings
+build_user_sequences = _inference_mod.build_user_sequences
 
 
 def main():
@@ -110,9 +62,7 @@ def main():
     print()
 
     print(f"Loading checkpoint from: {args.checkpoint}")
-    model, vocab, config, training_info = load_checkpoint(
-        args.checkpoint, DecoderLanguageModel, ItemVocab
-    )
+    model, vocab, config, training_info = load_recommender(args.checkpoint)
     print(f"  Model: {config['num_layers']} layers, {config['embed_dim']} dim, "
           f"{config['num_heads']} heads")
     print(f"  Vocab size: {config['vocab_size']} (movies + specials)")
@@ -125,17 +75,17 @@ def main():
     movie_titles = {}
     movies_path = os.path.join(ml_dir, "movies.dat")
     if os.path.exists(movies_path):
-        movie_titles = _ml_data_mod.load_movie_titles(movies_path)
+        movie_titles = load_movie_titles(movies_path)
 
     # Build the input history.
     if args.history:
         history = [int(x) for x in args.history.split(",") if x.strip()]
         source = "provided --history"
     else:
-        interactions = _ml_data_mod.load_movielens_ratings(
+        interactions = load_movielens_ratings(
             os.path.join(ml_dir, "ratings.dat")
         )
-        user_sequences = _ml_data_mod.build_user_sequences(interactions)
+        user_sequences = build_user_sequences(interactions)
         if args.user_id is not None and args.user_id in user_sequences:
             user_id = args.user_id
         else:
