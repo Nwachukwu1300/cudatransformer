@@ -1,0 +1,23 @@
+# Render Blueprint for the Stage 5 recommender web app.
+#
+# Native Python runtime (no Dockerfile): the whole dependency footprint is
+# numpy + fastapi + uvicorn -- no system packages, no GPU, no compiled
+# extensions beyond standard wheels.
+#
+# rootDir is the repo root (not webapp/) because the app imports
+# stage5/inference.py, which in turn loads stage2/stage3/stage4 modules by
+# path -- the service needs the whole repo tree, not just webapp/.
+#
+# $PORT is injected by Render; uvicorn must bind to it rather than a
+# hardcoded port, or the service will fail its health check and never go live.
+services:
+  - type: web
+    name: cudatransformer-recommender
+    runtime: python
+    plan: free
+    buildCommand: "pip install -r webapp/requirements_webapp.txt"
+    startCommand: "uvicorn webapp.backend.app:app --host 0.0.0.0 --port $PORT"
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.13.7"

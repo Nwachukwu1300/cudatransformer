@@ -1,0 +1,10 @@
+{
+  "final_train_loss": 4.20437272804761,
+  "final_val_loss": 5.0346182901648024,
+  "best_val_loss": 5.0327843503107,
+  "training_time": 6536.772160053253,
+  "num_epochs": 15,
+  "batch_size": 16,
+  "learning_rate": 0.001,
+  "dataset": "MovieLens 1M"
+}

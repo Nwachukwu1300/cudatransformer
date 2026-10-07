@@ -4,7 +4,18 @@ stage5/data/
 
 # Checkpoints
 stage4/checkpoints/
-stage5/checkpoints/
+
+# Stage 5 checkpoints are ignored EXCEPT the four recommender artifacts, which
+# the deployed web app needs at runtime (~6.8MB total -- small enough to ship
+# in the repo rather than standing up separate artifact hosting).
+# Note the `/*` rather than a trailing `/`: a trailing-slash directory ignore
+# stops git descending into the directory at all, so the `!` negations below
+# would be silently ignored.
+stage5/checkpoints/*
+!stage5/checkpoints/recommender_config.json
+!stage5/checkpoints/recommender_tokenizer.json
+!stage5/checkpoints/recommender_weights.npz
+!stage5/checkpoints/recommender_training_info.json
 
 # Python
 __pycache__/
