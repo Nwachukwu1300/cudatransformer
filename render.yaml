@@ -4,9 +4,14 @@
 # numpy + fastapi + uvicorn -- no system packages, no GPU, no compiled
 # extensions beyond standard wheels.
 #
-# rootDir is the repo root (not webapp/) because the app imports
-# stage5/inference.py, which in turn loads stage2/stage3/stage4 modules by
-# path -- the service needs the whole repo tree, not just webapp/.
+# This file lives at the repo ROOT on purpose: Render's Blueprint flow only
+# auto-detects render.yaml at the root, not in a subdirectory.
+#
+# No rootDir is set, so the service runs from the repo root. That is also what
+# the app needs: webapp/backend/app.py imports stage5/inference.py, which loads
+# stage2/stage3/stage4 modules by path, plus the committed model checkpoint in
+# stage5/checkpoints/ -- so the whole repo tree has to be present, not just
+# webapp/.
 #
 # $PORT is injected by Render; uvicorn must bind to it rather than a
 # hardcoded port, or the service will fail its health check and never go live.

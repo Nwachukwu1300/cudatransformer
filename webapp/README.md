@@ -15,14 +15,17 @@ webapp/
 ├── backend/
 │   ├── app.py            FastAPI app — loads the model once, serves the API + frontend
 │   ├── schemas.py        pydantic request/response models
-│   └── search_index.py   in-memory title search over the MovieLens catalog
+│   ├── search_index.py   in-memory title search over the MovieLens catalog
+│   └── catalog.py        year + genre metadata parsed from movies.dat
 ├── frontend/
 │   ├── index.html        single page — search, history, results
-│   ├── style.css         dark theme matching the root README
-│   └── app.js            search-as-you-type, history chips, recommend call
+│   ├── style.css         light "engineering document" theme
+│   └── app.js            search-as-you-type, history list, recommend call
 ├── requirements_webapp.txt
-├── render.yaml           Render Blueprint (native Python runtime)
-└── test_webapp.py        10 backend smoke tests
+└── test_webapp.py        11 backend smoke tests
+
+../render.yaml            Render Blueprint — lives at the repo root, since
+                          Render only auto-detects it there
 ```
 
 The actual inference lives in
@@ -79,11 +82,14 @@ python3 -m pytest webapp/test_webapp.py
 
 Render, free tier, native Python runtime — no Dockerfile, because the entire
 dependency footprint is numpy + fastapi + uvicorn (no system packages, no GPU,
-no compiled extensions beyond standard wheels). [`render.yaml`](render.yaml)
-defines the service; Render reads it when the repo is connected.
+no compiled extensions beyond standard wheels).
+[`render.yaml`](../render.yaml) defines the service; Render reads it when the
+repo is connected.
 
-Two things worth knowing if you redeploy this:
+Three things worth knowing if you redeploy this:
 
+- **`render.yaml` sits at the repo root, not in here.** Render's Blueprint flow
+  only auto-detects it at the root of the repository.
 - **It runs from the repo root**, not `webapp/`. `backend/app.py` loads
   `stage5/inference.py` by path, which loads `stage2`/`stage3`/`stage4`
   modules in turn — the service needs the whole tree.
