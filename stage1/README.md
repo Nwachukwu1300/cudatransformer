@@ -73,6 +73,31 @@ nvcc -O3 --use_fast_math -shared -Xcompiler -fPIC \
 
 Full numbers for every stage: [BENCHMARKS.md](../BENCHMARKS.md).
 
+### Estimated GPU speedup (not measured — see above)
+
+Until a Colab run fills in real numbers, here's a transparently-labeled
+**estimate**, not a measurement, for context:
+
+| Kernel | Expected speedup at largest tested size | Basis |
+|---|---|---|
+| Matrix multiply (1024³) | roughly 10–30x | Stage 6's tiled-attention kernel — same shared-memory tiling technique as `matmul.cu`'s tiled path — measured **25.7x** at a comparable problem size on a Tesla T4 |
+| Vector add / reduce_sum (10M elements) | roughly 5–15x | Large, embarrassingly-parallel elementwise/reduction ops typically see smaller gains than matmul since they're memory-bandwidth-bound rather than compute-bound |
+| Softmax (512×2048) | roughly 3–10x | Smaller op; warp-shuffle reduction helps but transfer overhead eats into the win at this size |
+
+**Why not just scale Stage 2's numbers instead:** Stage 2's own GPU run is
+real and already in this repo — and it's *slower* than CPU (60.1s vs 27.6s,
+see [stage2/README.md](../stage2/README.md)), because its ops are small enough
+that per-call Python/pybind11 and host↔device transfer overhead dominates.
+That's a real, correctly-measured result for Stage 2's workload, but
+extrapolating it to Stage 1 would wrongly predict Stage 1's much larger
+matmul/vector ops also run slower on GPU — which contradicts what Stage 6
+actually measured for a similarly large, well-parallelized operation. The
+estimate above reasons from Stage 6 instead, since it's the closer analogue.
+
+**This table is a placeholder, not a result.** Treat it as a plausible range,
+not something to cite as a project outcome — the real numbers from
+`stage1/colab_benchmark.py` supersede it the moment that script is run.
+
 ## Next
 
 The CPU reference ops here (`cpu_ops.py`) are **not** reused directly by the
