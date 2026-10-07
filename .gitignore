@@ -1,6 +1,18 @@
 # Data files (large)
 /data/
-stage5/data/
+
+# Stage 5's MovieLens-1M data is ignored EXCEPT movies.dat, which the deployed
+# web app needs at runtime to turn predicted movie IDs into titles (171KB of
+# titles/genres only -- ratings.dat, the 24MB file, is training-only and stays
+# ignored). The ML-1M README travels with it: the dataset's terms allow
+# redistribution provided that conditions notice stays intact.
+# Same `/*` trick as the checkpoints below -- a trailing-slash directory ignore
+# stops git descending into the directory, which would silently void the `!`.
+stage5/data/*
+!stage5/data/ml-1m/
+stage5/data/ml-1m/*
+!stage5/data/ml-1m/movies.dat
+!stage5/data/ml-1m/README
 
 # Checkpoints
 stage4/checkpoints/
