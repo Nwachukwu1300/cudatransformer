@@ -24,6 +24,7 @@ env/
 # OS
 .DS_Store
 .venv_stage7/
+.venv_webapp/
 
 # Playwright MCP browser automation artifacts
 .playwright-mcp/

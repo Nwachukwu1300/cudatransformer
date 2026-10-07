@@ -1,0 +1,15 @@
+# Stage 5 recommender, served as a web app -- separate from the Stage 1-7
+# requirements, which are NumPy-only (plus JAX for Stage 7 alone).
+#
+# Local dev:
+#     python3 -m venv .venv_webapp && source .venv_webapp/bin/activate
+#     python3 -m pip install -r webapp/requirements_webapp.txt
+#     uvicorn webapp.backend.app:app --reload --app-dir .
+#
+# Then open http://localhost:8000
+fastapi
+uvicorn[standard]
+numpy
+pydantic
+pytest
+httpx
