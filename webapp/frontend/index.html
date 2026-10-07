@@ -1,1 +1,72 @@
-<!doctype html><html><body><p>placeholder — built in step 4</p></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Next-Movie Recommender — CUDA Transformer Engine</title>
+  <link rel="icon" href="/favicon.ico" sizes="32x32">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="hero">
+      <p class="eyebrow">CUDA Transformer Engine</p>
+      <h1>What should you watch next?</h1>
+      <p class="sub">
+        Add a few movies you've watched. A transformer built from scratch —
+        no PyTorch, no TensorFlow — predicts what you'd pick next.
+      </p>
+    </header>
+
+    <section class="panel">
+      <label class="field-label" for="search">Search movies</label>
+      <div class="search-wrap">
+        <input
+          id="search"
+          type="text"
+          autocomplete="off"
+          placeholder="Start typing… e.g. Toy Story"
+          aria-describedby="search-hint"
+        >
+        <ul id="results" class="dropdown" hidden></ul>
+      </div>
+      <p id="search-hint" class="hint">
+        Pick movies in the order you watched them — most recent last.
+      </p>
+
+      <div class="history-block">
+        <div class="history-head">
+          <h2>Your history</h2>
+          <button id="clear" class="link-btn" hidden>Clear all</button>
+        </div>
+        <ul id="history" class="chips"></ul>
+        <p id="history-empty" class="empty-note">Nothing added yet.</p>
+      </div>
+
+      <button id="recommend" class="primary" disabled>
+        Get recommendations
+      </button>
+      <p id="status" class="status" hidden></p>
+    </section>
+
+    <section id="recs-panel" class="panel recs" hidden>
+      <h2>Predicted next watches</h2>
+      <ol id="recs" class="rec-list"></ol>
+      <p class="score-note">
+        Scores are raw model relevance scores (logits), not probabilities —
+        higher means the model ranked it more strongly.
+      </p>
+    </section>
+
+    <footer class="foot">
+      <p>
+        Trained on MovieLens 1M with the same decoder that writes sentences in
+        <a href="https://github.com/Nwachukwu1300/cudatransformer" target="_blank" rel="noopener">this project</a>'s
+        language model — only the vocabulary changed.
+      </p>
+    </footer>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>
