@@ -38,10 +38,17 @@ available) output against NumPy references for correctness.
 ## Results
 
 CPU numbers (every size tested): [`stage1_results.txt`](stage1_results.txt).
-GPU numbers (Colab Tesla T4): `stage1_results_gpu.txt` at the repo root.
 
-This machine has no NVIDIA GPU, so the GPU columns in a local run show `N/A`.
-To get real GPU numbers:
+**GPU numbers: pending.** This machine has no NVIDIA GPU, so the GPU columns
+in a local run show `N/A`. `stage1/colab_benchmark.py` (added in Stage 8) is
+ready to produce real numbers on Colab — Stages 2, 6, and 7 all have
+Colab-verified GPU numbers, Stage 1 doesn't yet, purely because Colab's free
+GPU quota was exhausted (from running Stages 6/7) at the time Stage 8 wrapped
+up. Once quota resets, run it and `stage1_results_gpu.txt` will appear at the
+repo root (same convention as `stage2_results_gpu.txt`,
+`stage6_results_gpu.txt`).
+
+To get real GPU numbers once quota is available:
 
 ```bash
 # On Colab (GPU runtime):
