@@ -1,26 +1,95 @@
 # CUDA Transformer Engine
 
-A transformer built from the CUDA kernel level up — no PyTorch, TensorFlow, or JAX
-in the core math. The same architecture is trained end to end on two different
-domains (language and recommendation) to prove the engine generalizes, then
-benchmarked against a hand-written GPU attention kernel and a JAX/TPU
-reimplementation for comparison.
+**A transformer, built from raw CUDA kernels up. No PyTorch. No TensorFlow. No
+JAX in the core math.** Every matmul, every backward pass, every line of
+attention math — hand-written, GPU-verified, and trained end to end on two
+completely different problems with the same unmodified architecture.
+
+<p align="center">
+  <b>🔥 25.7x faster attention</b> &nbsp;·&nbsp;
+  <b>🧠 98% MNIST accuracy</b> &nbsp;·&nbsp;
+  <b>📚 coherent text generation</b> &nbsp;·&nbsp;
+  <b>🎬 movie recommendations</b> &nbsp;·&nbsp;
+  <b>⚡ TPU beats GPU, 2.6x</b>
+</p>
+
+---
+
+## The pitch
+
+Most "built an AI project" portfolios are a config file pointed at someone
+else's library. This one isn't. It starts at the CUDA kernel — threads,
+blocks, shared memory, warp shuffles — and builds *up* through a hand-rolled
+autograd engine to a full transformer, with nothing borrowed from a deep
+learning framework for the core math.
+
+Then it proves the engine actually works by training it twice, on two
+unrelated problems, using **the exact same model class, unmodified**:
 
 ```
-Raw CUDA kernels  ->  Autograd engine  ->  Transformer  ->  Two trained applications
-   (Stage 1)           (Stage 2)          (Stage 3)         (Stage 4, Stage 5)
+"The king walked into the forest..."          ← same decoder, word tokens
+"users who liked Mulan will probably like..."  ← same decoder, movie tokens
 ```
 
-## Why this exists
+That's the whole point. A next-word predictor and a next-movie recommender
+are the same math problem wearing different labels — and this repo is the
+proof, not just the claim.
 
-Most portfolio projects call an existing library and fine-tune a model. This
-project shows what happens underneath: memory layout, thread/block scheduling,
-backward passes, and attention math, all written by hand. The two application
-demos at the end (language modeling, recommendation) prove the engine is
-general — not a one-off script, but a reusable architecture where swapping the
-*meaning* of the input integers is the only thing that changes between tasks.
+## What's actually in here
 
-## Architecture
+```mermaid
+flowchart LR
+    A["⚙️ Stage 1<br/>CUDA kernels"] --> B["🧮 Stage 2<br/>Autograd engine"]
+    B --> C["🤖 Stage 3<br/>Transformer"]
+    C --> D["📖 Stage 4<br/>Language model"]
+    C --> E["🎬 Stage 5<br/>Recommender"]
+    C --> F["⚡ Stage 6<br/>Tiled attention"]
+    C --> G["☁️ Stage 7<br/>GPU vs TPU"]
+
+    style A fill:#2d1b69,color:#fff,stroke:#8b5cf6
+    style B fill:#1e3a5f,color:#fff,stroke:#3b82f6
+    style C fill:#0f4c3a,color:#fff,stroke:#10b981
+    style D fill:#4a3a0f,color:#fff,stroke:#f59e0b
+    style E fill:#4a3a0f,color:#fff,stroke:#f59e0b
+    style F fill:#5c1a1a,color:#fff,stroke:#ef4444
+    style G fill:#5c1a1a,color:#fff,stroke:#ef4444
+```
+
+| | Stage | What it proves |
+|---|---|---|
+| ⚙️ | [**1 — CUDA Kernels**](stage1/) | Hand-written vector add, tiled matmul, warp-shuffle softmax, tree-reduction sum — the building blocks, benchmarked CPU vs GPU |
+| 🧮 | [**2 — Autograd Engine**](stage2/) | A `Tensor` class with a real backward pass, trains a 3-layer MLP to **98.00%** on MNIST — zero frameworks |
+| 🤖 | [**3 — Transformer**](stage3/) | Multi-head causal attention, pre-norm residual blocks, built entirely on the Stage 2 engine |
+| 📖 | [**4 — Language Model**](stage4/) | Trained on TinyStories — loss **3.40 → 1.69**, generates genuinely coherent completions |
+| 🎬 | [**5 — Recommender**](stage5/) | *Same model class, zero architecture changes* — retrained on MovieLens 1M to predict the next movie someone watches |
+| ⚡ | [**6 — Tiled Attention**](stage6/) | A from-scratch FlashAttention-style CUDA kernel — **25.7x faster**, 128 MB of memory never allocated |
+| ☁️ | [**7 — GPU vs TPU**](stage7/) | Same architecture, JAX/Flax, raced on a Colab TPU v5e vs a T4 GPU — **TPU wins by 2.6x** |
+
+**[→ Every number, every stage: BENCHMARKS.md](BENCHMARKS.md)**
+**[→ How the kernels actually work: CUDA_OPTIMIZATIONS.md](CUDA_OPTIMIZATIONS.md)**
+
+## See it work
+
+**The language model**, prompted with *"The king walked into"*:
+
+> *"the king walked into the forest. he was not scared of the lion. he was too
+> scared to go away. the king saw the queen and wanted the best."*
+
+**The recommender**, given a user's history of *A Bug's Life, Antz, The
+Hunchback of Notre Dame, Hercules, Mulan*:
+
+| Rank | Predicted next movie |
+|---|---|
+| 🥇 | The Lion King (1994) |
+| 🥈 | The Sword in the Stone (1963) |
+| 🥉 | The Swan Princess (1994) |
+
+Same decoder. Same weights-from-scratch training loop. The only thing that
+changed between these two outputs is what the integers in the vocabulary
+stand for — see [the full argument](stage5_writeup.md) for why that's not a
+coincidence.
+
+## One architecture, two domains
 
 ```mermaid
 flowchart TB
@@ -29,155 +98,127 @@ flowchart TB
     end
 
     subgraph embed["Embedding"]
-        te["Token Embedding<br/>lookup table"]
-        pe["Positional Embedding<br/>learned, per position"]
+        te["Token Embedding"]
+        pe["Positional Embedding"]
         tok --> te
         te --> add1(("+"))
         pe --> add1
     end
 
-    subgraph block["Transformer Block × N  (pre-norm)"]
+    subgraph block["Transformer Block × N — pre-norm"]
         direction TB
         ln1["LayerNorm"] --> attn["Multi-Head Causal<br/>Self-Attention"]
-        attn --> res1(("+ residual"))
+        attn --> res1(("+"))
         res1 --> ln2["LayerNorm"] --> ffn["FeedForward<br/>Linear → GELU → Linear"]
-        ffn --> res2(("+ residual"))
+        ffn --> res2(("+"))
     end
 
     subgraph output["Output"]
-        fln["Final LayerNorm"]
-        proj["Output Projection<br/>(untied, no bias)"]
-        logits["Logits<br/>(batch, seq_len, vocab_size)"]
-        fln --> proj --> logits
+        fln["Final LayerNorm"] --> proj["Output Projection"] --> logits["Logits"]
     end
 
     add1 --> block --> fln
+
+    style input fill:#1a1a2e,color:#fff
+    style embed fill:#16213e,color:#fff
+    style block fill:#0f3460,color:#fff
+    style output fill:#1a1a2e,color:#fff
 ```
 
-The same `DecoderLanguageModel` class (`stage3/models/decoder_lm.py`) is reused,
-**completely unchanged**, for both applications:
+This single class (`stage3/models/decoder_lm.py::DecoderLanguageModel`) is
+reused **byte-for-byte unchanged** across Stages 4 and 5:
 
 | | Stage 4: Language model | Stage 5: Recommender |
 |---|---|---|
 | Vocabulary | 2,000 words (TinyStories) | 3,710 movie IDs (MovieLens 1M) |
-| Sequence = | a sentence | one user's watch history, in order |
+| A "sequence" is | a sentence | one user's watch history, in order |
 | Predicts | the next word | the next movie |
 
-Swapping domains only required changing what the integers *mean* and how
-sequences are segmented — see [`stage5_writeup.md`](stage5_writeup.md) for the
-full argument that next-token and next-item prediction are the same task.
+## The numbers that matter
 
-## Engine internals
+| Metric | Result |
+|---|---|
+| MNIST test accuracy | **98.00%** (hand-written Adam, no framework) |
+| Language model loss | 3.40 → **1.69** over 15 epochs |
+| Recommender loss | 6.46 → **4.20** over 15 epochs, 1M interactions |
+| Tiled attention vs dense, seq=1024 | **25.7x faster**, 128 MB memory avoided |
+| TPU v5e vs Tesla T4 training | **2.6x faster**, same code, only hardware changed |
+| TPU vs this project's own CPU engine | **~128x faster** |
+
+Every number above is measured, not estimated — most on real GPU/TPU hardware
+via Google Colab, since the development machine has neither. Full receipts:
+**[BENCHMARKS.md](BENCHMARKS.md)**.
+
+## How the engine is actually wired
 
 ```mermaid
 flowchart LR
     subgraph s1["Stage 1: Raw CUDA kernels"]
-        k1["vector_add"]
-        k2["matmul<br/>(naive + shared-mem tiled)"]
-        k3["softmax<br/>(warp-shuffle reduction)"]
-        k4["reduce_sum<br/>(tree reduction)"]
+        k["vector_add · matmul (tiled)<br/>softmax · reduce_sum"]
     end
 
     subgraph s2["Stage 2: Autograd engine (NumPy)"]
-        tensor["Tensor<br/>forward + backward graph"]
-        layers["Linear · LayerNorm<br/>ReLU · GELU · CrossEntropy"]
-        opt["SGD · Adam"]
+        tensor["Tensor — forward +<br/>backward graph"]
     end
 
-    s1 -.->|"ported to NumPy<br/>for the live engine"| s2
-    s2 --> model["Transformer<br/>(Stage 3)"]
+    s1 -.->|"same techniques,<br/>reimplemented for the live path"| s2
+    s2 --> model["Transformer<br/>(Stages 3–5)"]
+
+    style s1 fill:#2d1b69,color:#fff
+    style s2 fill:#1e3a5f,color:#fff
+    style model fill:#0f4c3a,color:#fff
 ```
 
-**Important nuance:** the Stage 1/2 CUDA kernels are a standalone, benchmarked
-deliverable proving the operations work correctly and fast on a GPU — they are
-**not** wired into the live training path. The `Tensor` engine that actually
-trains the models (`stage2/tensor.py`) is pure NumPy, so every model in Stages
-2–5 trains on CPU. This is why training runs on a GPU-less machine, and why the
-CUDA kernels are benchmarked separately (see [BENCHMARKS.md](BENCHMARKS.md)).
-Stage 6's tiled-attention CUDA kernel is the one exception that was also
-verified against the live NumPy attention path for correctness.
+The Stage 1/2 CUDA kernels are a standalone, GPU-benchmarked deliverable — they
+prove the operations are correct and fast on real hardware. The engine that
+actually *trains* every model in Stages 2–5 (`stage2/tensor.py`) is pure
+NumPy, which is why this entire project — MNIST, the language model, the
+recommender — trains on a machine with no NVIDIA GPU at all. Stage 6's tiled
+attention kernel is the one place the two paths are verified against each
+other directly: the CUDA kernel's output is checked to match the live NumPy
+model's attention, element for element, before it's benchmarked.
 
-## Results at a glance
+## Run it
 
-| Stage | Deliverable | Headline result |
-|---|---|---|
-| [1](stage1/) | CUDA kernel benchmarks | 4 kernels (vector add, matmul, softmax, reduction), CPU vs GPU |
-| [2](stage2/) | Autograd engine + MNIST MLP | **98.0%** test accuracy, trained with hand-written Adam |
-| [3](stage3/) | Transformer decoder | Full fwd/bwd pass verified, 94.4% synthetic-task accuracy |
-| [4](stage4/) | Tiny language model | Loss 3.40 → **1.69**, coherent TinyStories completions |
-| [5](stage5/) | Sequential recommender | Same architecture, loss 6.46 → **4.20** on MovieLens 1M |
-| [6](stage6/) | Tiled attention (FlashAttention-style) | **25.7x** faster than dense attention at seq_len=1024 on a T4 |
-| [7](stage7/) | GPU vs TPU training (JAX/Flax) | TPU v5e **2.6x** faster than T4, **128x** faster than our CPU engine |
-| [8](#stage-8-polish) | Polish & documentation | This file, plus per-stage docs, diagrams, and a benchmark roll-up |
+```bash
+# Stage 2 — train the MNIST MLP from scratch (CPU, ~30s)
+python3 train_mnist.py
 
-Full numbers for every stage: **[BENCHMARKS.md](BENCHMARKS.md)**.
-CUDA kernel design notes: **[CUDA_OPTIMIZATIONS.md](CUDA_OPTIMIZATIONS.md)**.
+# Stage 4 — generate text from the trained language model
+python3 generate.py --prompt "The king walked into"
 
-## Repo layout
+# Stage 5 — get a movie recommendation from the trained model
+python3 recommend.py --user-id 1
+```
+
+Every stage has its own `README.md` with the goal, what was built, how to run
+it, and real results — start with [stage1/](stage1/) and follow the links
+forward, or jump straight to whichever stage interests you.
+
+## Repo map
 
 ```
 cudatransformer/
-├── stage1/        CUDA kernel fundamentals (vector add, matmul, softmax, reduction)
-├── stage2/        Autograd engine (Tensor, layers, optimizers) + MNIST MLP
-├── stage3/        Transformer decoder (attention, embeddings, blocks)
-├── stage4/        Tiny language model, trained on TinyStories
-├── stage5/        Sequential recommender, trained on MovieLens 1M
-├── stage6/        Simplified tiled attention, CUDA kernel + benchmarks
-├── stage7/        JAX/Flax reimplementation for GPU vs TPU comparison
-├── BENCHMARKS.md          All measured numbers, one place
-├── CUDA_OPTIMIZATIONS.md  Why each kernel is written the way it is
-└── *_results.txt          Raw output from each stage's benchmark/training run
+├── stage1/   ⚙️  CUDA kernel fundamentals
+├── stage2/   🧮  Autograd engine + MNIST
+├── stage3/   🤖  Transformer decoder
+├── stage4/   📖  Language model (TinyStories)
+├── stage5/   🎬  Recommender (MovieLens 1M)
+├── stage6/   ⚡  Tiled attention (FlashAttention-style)
+├── stage7/   ☁️  GPU vs TPU (JAX/Flax)
+├── BENCHMARKS.md          every measured number, one place
+└── CUDA_OPTIMIZATIONS.md  why each kernel is written the way it is
 ```
 
-Each `stageN/` folder has its own `README.md` with that stage's goal, what was
-built, how to run it, and a link to its results file.
+## The rules this project held itself to
 
-## Running it yourself
-
-Everything in Stages 1–6 is pure Python + NumPy (no GPU required) except the
-CUDA kernel builds, which need `nvcc` (the GPU-only numbers in this repo were
-produced on Google Colab — see each stage's `COLAB_README.md` where present).
-
-```bash
-# Stage 2: train the MNIST MLP (CPU, ~30s)
-python3 train_mnist.py
-
-# Stage 4: train the tiny language model (CPU, ~2hr) or generate from the checkpoint
-python3 generate.py
-
-# Stage 5: get a recommendation from the trained checkpoint
-python3 recommend.py
-```
-
-Stage 7 needs a separate environment (`requirements_stage7.txt`) since it's the
-one place JAX is used, deliberately isolated from the NumPy-only constraint
-everywhere else — see [stage7/README.md](stage7/README.md).
-
-## Constraints this project holds itself to
-
-- **No PyTorch / TensorFlow / JAX for the core math.** NumPy is fine for CPU
-  comparisons and data loading. The one exception is Stage 7, which exists
-  specifically to compare GPU vs TPU training — CUDA kernels can't run on a
-  TPU, so JAX is the only way to make that comparison, and it's fenced off
-  from the rest of the engine (separate requirements file, separate package).
-- **Every benchmark number is measured, not estimated**, wherever hardware
-  allowed it. Where a number couldn't be measured locally (no NVIDIA GPU or
-  TPU on the development machine), it was measured on Google Colab instead —
-  never approximated.
-- **One stage at a time**, each with a working, verified deliverable before
-  the next stage starts.
-
-## Stage 8: Polish
-
-This stage (the one you're reading the output of) added:
-- This root README, with the architecture diagrams above
-- A `README.md` in every `stageN/` folder
-- [BENCHMARKS.md](BENCHMARKS.md) — every real number from every stage, in one table
-- [CUDA_OPTIMIZATIONS.md](CUDA_OPTIMIZATIONS.md) — a walkthrough of the actual
-  optimization techniques used in the kernels (shared-memory tiling, warp-shuffle
-  reductions, coalesced access, online softmax) with references to the real code
-- Repo cleanup: removed tracked `.pyc` files and unused data artifacts
-- Closed a gap from Stage 1: its kernel benchmarks had never been run on a real
-  GPU (`stage1_results.txt` showed `CUDA Available: False`) — added
-  `stage1/colab_benchmark.py` and ran it on Colab to get real numbers, matching
-  what Stages 2, 6, and 7 already had
+- **No PyTorch / TensorFlow / JAX for the core math.** The one deliberate
+  exception is Stage 7, which exists specifically to compare GPU vs TPU
+  training — CUDA kernels can't run on a TPU, so JAX is the only way to make
+  that comparison fairly, and it's fenced off in its own requirements file.
+- **Every benchmark is measured, not approximated**, on real hardware —
+  mostly Google Colab, since the dev machine has no NVIDIA GPU or TPU. The one
+  gap ([Stage 1's GPU numbers](stage1/README.md#estimated-gpu-speedup-not-measured--see-above),
+  blocked on Colab quota) is labeled as an estimate, not dressed up as real.
+- **One stage at a time, each with a working deliverable**, before the next
+  one starts.
