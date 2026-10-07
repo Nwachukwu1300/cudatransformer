@@ -24,6 +24,7 @@ from .schemas import (
     SearchResponse,
     SearchResult,
 )
+from .catalog import load_movie_meta
 from .search_index import SearchIndex
 
 _BACKEND_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -61,6 +62,7 @@ async def lifespan(app: FastAPI):
     movies_path = os.path.join(_STAGE5_DIR, "data", "ml-1m", "movies.dat")
     movie_titles = _inference_mod.load_movie_titles(movies_path)
     state["movie_titles"] = movie_titles
+    state["movie_meta"] = load_movie_meta(movies_path)
     state["search_index"] = SearchIndex.build(movie_titles)
 
     print(f"Recommender loaded: {config['num_layers']} layers, "
@@ -99,19 +101,26 @@ def recommend(req: RecommendRequest):
     model = state["model"]
     vocab = state["vocab"]
     movie_titles = state["movie_titles"]
+    movie_meta = state["movie_meta"]
 
     preds = _inference_mod.predict_next_items(model, vocab, req.history, top_k=req.top_k)
 
-    return RecommendResponse(
-        recommendations=[
+    recommendations = []
+    for movie_id, score in preds:
+        fallback = movie_titles.get(movie_id, f"movie {movie_id}")
+        meta = movie_meta.get(movie_id)
+        recommendations.append(
             Recommendation(
                 movie_id=movie_id,
-                title=movie_titles.get(movie_id, f"movie {movie_id}"),
+                title=fallback,
                 score=score,
+                display=meta.display if meta else fallback,
+                year=meta.year if meta else "",
+                genres=meta.genres if meta else [],
             )
-            for movie_id, score in preds
-        ]
-    )
+        )
+
+    return RecommendResponse(recommendations=recommendations)
 
 
 # Mounted last so it never shadows the /api/* routes above.

@@ -1,28 +1,30 @@
-/* Next-movie recommender UI.
-   Talks to /api/search and /api/recommend (same origin as this page). */
+/* next-movie — talks to /api/search and /api/recommend (same origin). */
 
-const searchEl = document.getElementById("search");
-const resultsEl = document.getElementById("results");
-const historyEl = document.getElementById("history");
-const historyEmptyEl = document.getElementById("history-empty");
-const clearBtn = document.getElementById("clear");
-const recommendBtn = document.getElementById("recommend");
-const statusEl = document.getElementById("status");
-const recsPanel = document.getElementById("recs-panel");
-const recsEl = document.getElementById("recs");
+const searchEl   = document.getElementById("search");
+const resultsEl  = document.getElementById("results");
+const historyEl  = document.getElementById("history");
+const emptyEl    = document.getElementById("history-empty");
+const runBtn     = document.getElementById("recommend");
+const runLabel   = document.getElementById("run-label");
+const recsEl     = document.getElementById("recs");
+const placeholder= document.getElementById("recs-placeholder");
+const badgeEl    = document.getElementById("out-badge");
+const liveDot    = document.getElementById("live-dot");
 
-// History is ordered oldest -> newest, matching predict_next_items'
-// "most recent last" contract.
+// Oldest -> newest, matching predict_next_items' "most recent last" contract.
 const history = [];
 let matches = [];
 let activeIndex = -1;
 let searchTimer = null;
+let hasRun = false;
 
-// Nudge a sleeping free-tier instance awake while the user is still picking
-// movies, so the first real request isn't paying the whole cold start.
-fetch("/api/health").catch(() => {});
+/* Wake a sleeping free-tier instance while the user is still picking movies,
+   so the first real request isn't paying the whole cold start. */
+fetch("/api/health")
+  .then((r) => { if (r.ok) liveDot.classList.add("on"); })
+  .catch(() => {});
 
-/* ---------------- search ---------------- */
+/* ───────── search ───────── */
 
 searchEl.addEventListener("input", () => {
   clearTimeout(searchTimer);
@@ -34,11 +36,13 @@ searchEl.addEventListener("input", () => {
 async function runSearch(q) {
   try {
     const resp = await fetch(`/api/search?q=${encodeURIComponent(q)}&limit=10`);
-    if (!resp.ok) throw new Error(`search failed: ${resp.status}`);
+    if (!resp.ok) throw new Error(String(resp.status));
     const data = await resp.json();
-    matches = data.results.filter((m) => !history.some((h) => h.movie_id === m.movie_id));
+    matches = data.results.filter(
+      (m) => !history.some((h) => h.movie_id === m.movie_id)
+    );
     renderDropdown();
-  } catch (err) {
+  } catch {
     closeDropdown();
   }
 }
@@ -60,7 +64,7 @@ function renderDropdown() {
     const li = document.createElement("li");
     li.textContent = m.title;
     li.addEventListener("mousedown", (e) => {
-      e.preventDefault(); // keep focus in the input
+      e.preventDefault();          // keep focus in the input
       addMovie(i);
     });
     resultsEl.appendChild(li);
@@ -103,11 +107,12 @@ searchEl.addEventListener("keydown", (e) => {
 
 searchEl.addEventListener("blur", () => setTimeout(closeDropdown, 120));
 
-/* ---------------- history ---------------- */
+/* ───────── history ───────── */
 
-function addMovie(index) {
-  const movie = matches[index];
+function addMovie(i) {
+  const movie = matches[i];
   if (!movie) return;
+  if (history.length >= 63) return;          // API caps history at 63
   if (!history.some((h) => h.movie_id === movie.movie_id)) {
     history.push(movie);
     renderHistory();
@@ -117,8 +122,8 @@ function addMovie(index) {
   searchEl.focus();
 }
 
-function removeMovie(movieId) {
-  const i = history.findIndex((h) => h.movie_id === movieId);
+function removeMovie(id) {
+  const i = history.findIndex((h) => h.movie_id === id);
   if (i !== -1) {
     history.splice(i, 1);
     renderHistory();
@@ -129,44 +134,42 @@ function renderHistory() {
   historyEl.innerHTML = "";
   history.forEach((m) => {
     const li = document.createElement("li");
+
     const label = document.createElement("span");
     label.textContent = m.title;
+
     const btn = document.createElement("button");
     btn.type = "button";
     btn.textContent = "×";
     btn.setAttribute("aria-label", `Remove ${m.title}`);
     btn.addEventListener("click", () => removeMovie(m.movie_id));
+
     li.append(label, btn);
     historyEl.appendChild(li);
   });
 
   const has = history.length > 0;
-  historyEmptyEl.hidden = has;
-  clearBtn.hidden = !has;
-  recommendBtn.disabled = !has;
+  emptyEl.hidden = has;
+  runBtn.disabled = !has;
+  runLabel.textContent = hasRun ? "Run model again" : "Run model";
 }
 
-clearBtn.addEventListener("click", () => {
-  history.length = 0;
-  renderHistory();
-  recsPanel.hidden = true;
-});
+/* ───────── recommend ───────── */
 
-/* ---------------- recommend ---------------- */
-
-recommendBtn.addEventListener("click", async () => {
+runBtn.addEventListener("click", async () => {
   if (history.length === 0) return;
 
-  recommendBtn.disabled = true;
-  statusEl.className = "status";
-  statusEl.textContent = "Thinking…";
-  statusEl.hidden = false;
+  runBtn.disabled = true;
+  runLabel.textContent = "Running…";
+  clearError();
+  badgeEl.hidden = true;
 
   // Free-tier instances sleep when idle; say so rather than looking hung.
   const slowTimer = setTimeout(() => {
-    statusEl.textContent =
-      "Waking up the model server — the first request after idle can take up to a minute.";
+    runLabel.textContent = "Waking the server…";
   }, 3000);
+
+  const started = performance.now();
 
   try {
     const resp = await fetch("/api/recommend", {
@@ -177,66 +180,74 @@ recommendBtn.addEventListener("click", async () => {
         top_k: 5,
       }),
     });
-    if (!resp.ok) throw new Error(`request failed: ${resp.status}`);
+    if (!resp.ok) throw new Error(String(resp.status));
     const data = await resp.json();
-    renderRecs(data.recommendations);
-    statusEl.hidden = true;
-  } catch (err) {
-    statusEl.className = "status error";
-    statusEl.textContent = "Something went wrong. Try again in a moment.";
+    const ms = Math.round(performance.now() - started);
+    renderRecs(data.recommendations, ms);
+    hasRun = true;
+    liveDot.classList.add("on");
+  } catch {
+    showError("Couldn't reach the model. Give it a moment and try again.");
   } finally {
     clearTimeout(slowTimer);
-    recommendBtn.disabled = history.length === 0;
+    runBtn.disabled = history.length === 0;
+    runLabel.textContent = hasRun ? "Run model again" : "Run model";
   }
 });
 
-function renderRecs(recs) {
+function renderRecs(recs, ms) {
   recsEl.innerHTML = "";
 
   if (!recs || recs.length === 0) {
-    recsPanel.hidden = true;
-    statusEl.className = "status";
-    statusEl.textContent = "No recommendations for that history.";
-    statusEl.hidden = false;
+    placeholder.hidden = false;
+    badgeEl.hidden = true;
     return;
   }
-
-  // Raw logits aren't on a fixed scale, so bars are normalised within this
-  // result set purely for visual comparison — the printed number is the real
-  // score.
-  const scores = recs.map((r) => r.score);
-  const max = Math.max(...scores);
-  const min = Math.min(...scores);
-  const span = max - min || 1;
 
   recs.forEach((r) => {
     const li = document.createElement("li");
 
+    const main = document.createElement("div");
     const title = document.createElement("div");
     title.className = "rec-title";
-    title.textContent = r.title;
+    title.textContent = r.display || r.title;
+    main.appendChild(title);
 
-    const barWrap = document.createElement("div");
-    barWrap.className = "rec-bar-wrap";
-
-    const bar = document.createElement("div");
-    bar.className = "rec-bar";
-    const fill = document.createElement("span");
-    // Floor at 18% so the lowest-ranked item still reads as a bar.
-    fill.style.width = `${18 + ((r.score - min) / span) * 82}%`;
-    bar.appendChild(fill);
+    const bits = [r.year, ...(r.genres || [])].filter(Boolean);
+    if (bits.length) {
+      const meta = document.createElement("div");
+      meta.className = "rec-meta";
+      meta.textContent = bits.join(" · ");
+      main.appendChild(meta);
+    }
 
     const score = document.createElement("div");
     score.className = "rec-score";
     score.textContent = r.score.toFixed(2);
 
-    barWrap.append(bar, score);
-    li.append(title, barWrap);
+    li.append(main, score);
     recsEl.appendChild(li);
   });
 
-  recsPanel.hidden = false;
-  recsPanel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  placeholder.hidden = true;
+  badgeEl.textContent = `COMPLETE · ${ms}MS`;
+  badgeEl.hidden = false;
+}
+
+/* ───────── errors ───────── */
+
+function showError(msg) {
+  clearError();
+  const p = document.createElement("p");
+  p.className = "err";
+  p.id = "err";
+  p.textContent = msg;
+  runBtn.insertAdjacentElement("afterend", p);
+}
+
+function clearError() {
+  const existing = document.getElementById("err");
+  if (existing) existing.remove();
 }
 
 renderHistory();

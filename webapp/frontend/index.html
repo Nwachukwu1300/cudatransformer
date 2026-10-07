@@ -3,70 +3,273 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Next-Movie Recommender — CUDA Transformer Engine</title>
+  <title>next-movie — a from-scratch transformer experiment</title>
+  <meta name="description" content="A working movie recommender built from scratch — CUDA kernels, autograd, transformer, training loop and all. No ML frameworks.">
   <link rel="icon" href="/favicon.ico" sizes="32x32">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-  <main class="shell">
-    <header class="hero">
-      <p class="eyebrow">CUDA Transformer Engine</p>
-      <h1>What should you watch next?</h1>
-      <p class="sub">
-        Add a few movies you've watched. A transformer built from scratch —
-        no PyTorch, no TensorFlow — predicts what you'd pick next.
-      </p>
-    </header>
 
-    <section class="panel">
-      <label class="field-label" for="search">Search movies</label>
-      <div class="search-wrap">
-        <input
-          id="search"
-          type="text"
-          autocomplete="off"
-          placeholder="Start typing… e.g. Toy Story"
-          aria-describedby="search-hint"
-        >
-        <ul id="results" class="dropdown" hidden></ul>
+<!-- ───────────────── nav ───────────────── -->
+<nav class="nav">
+  <div class="wrap nav-inner">
+    <a class="brand" href="/">
+      <span class="brand-mark">N</span>
+      <span class="brand-name">next-movie</span>
+    </a>
+    <div class="nav-right">
+      <span class="live"><span class="dot" id="live-dot"></span>LIVE MODEL</span>
+      <a class="src-link" href="https://github.com/Nwachukwu1300/cudatransformer" target="_blank" rel="noopener">
+        <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
+        SOURCE
+      </a>
+    </div>
+  </div>
+</nav>
+
+<!-- ───────────────── hero ───────────────── -->
+<header class="hero">
+  <div class="wrap">
+    <div class="rail">
+      <span>EXPERIMENT 04</span>
+      <span class="rail-end">DECODER-ONLY TRANSFORMER</span>
+    </div>
+    <h1>What should you watch next?</h1>
+    <p class="lede">
+      A working movie recommender built from scratch—CUDA kernels, autograd,
+      transformer, training loop and all. No ML frameworks. The model runs live
+      on a CPU in NumPy.
+    </p>
+    <a class="src-cta" href="https://github.com/Nwachukwu1300/cudatransformer" target="_blank" rel="noopener">
+      <svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
+      <span class="src-cta-text">
+        <span class="src-cta-label">READ THE SOURCE</span>
+        <span class="src-cta-url">github.com/Nwachukwu1300/cudatransformer</span>
+      </span>
+      <span class="src-cta-arrow" aria-hidden="true">→</span>
+    </a>
+  </div>
+</header>
+
+<!-- ───────────────── 01 · try it ───────────────── -->
+<section class="band band-white" id="try">
+  <div class="wrap">
+    <div class="sec-head">
+      <div>
+        <p class="kicker">01 / TRY IT</p>
+        <h2>Build a watch history</h2>
       </div>
-      <p id="search-hint" class="hint">
-        Pick movies in the order you watched them — most recent last.
+      <p class="sec-note">
+        Add movies in the order you watched them.<br>
+        Oldest first, most recent last.
       </p>
+    </div>
 
-      <div class="history-block">
-        <div class="history-head">
-          <h2>Your history</h2>
-          <button id="clear" class="link-btn" hidden>Clear all</button>
+    <div class="console">
+      <!-- left: input -->
+      <div class="console-left">
+        <div class="step">
+          <span class="step-no">01</span>
+          <div>
+            <h3>Search the catalog</h3>
+            <p class="step-sub">3,706 MovieLens titles</p>
+          </div>
         </div>
-        <ul id="history" class="chips"></ul>
-        <p id="history-empty" class="empty-note">Nothing added yet.</p>
+
+        <div class="search-wrap">
+          <svg class="search-icon" viewBox="0 0 16 16" width="15" height="15" aria-hidden="true">
+            <path fill="none" stroke="currentColor" stroke-width="1.6" d="M7 12A5 5 0 1 0 7 2a5 5 0 0 0 0 10Zm3.6-1.4L14.5 14.5"/>
+          </svg>
+          <input id="search" type="text" autocomplete="off" placeholder='Try "The Matrix"' aria-label="Movie title">
+          <ul id="results" class="dropdown" hidden></ul>
+        </div>
+
+        <div class="step step-tight">
+          <span class="step-no">02</span>
+          <div>
+            <h3>Your watch history</h3>
+            <p class="step-sub">Sequence order changes the prediction</p>
+          </div>
+        </div>
+
+        <div class="hist-rail">
+          <span>OLDEST</span><span>MOST RECENT</span>
+        </div>
+        <ol id="history" class="hist"></ol>
+        <p id="history-empty" class="hist-empty">No movies yet — search above to add some.</p>
+
+        <button id="recommend" class="run" disabled>
+          <span id="run-label">Run model</span>
+          <span class="run-arrow" aria-hidden="true">→</span>
+        </button>
+
+        <p class="cold-note">
+          <span class="i">i</span>
+          First request can take a minute. The free server sleeps when idle.
+        </p>
       </div>
 
-      <button id="recommend" class="primary" disabled>
-        Get recommendations
-      </button>
-      <p id="status" class="status" hidden></p>
-    </section>
+      <!-- right: output -->
+      <div class="console-right">
+        <div class="step out-head">
+          <span class="step-no">03</span>
+          <div>
+            <h3>Model output</h3>
+            <p class="step-sub">Top 5 next-token predictions</p>
+          </div>
+          <span id="out-badge" class="badge" hidden></span>
+        </div>
 
-    <section id="recs-panel" class="panel recs" hidden>
-      <h2>Predicted next watches</h2>
-      <ol id="recs" class="rec-list"></ol>
-      <p class="score-note">
-        Scores are raw model relevance scores (logits), not probabilities —
-        higher means the model ranked it more strongly.
+        <ol id="recs" class="recs"></ol>
+
+        <div id="recs-placeholder" class="recs-empty">
+          <p>Add a few movies and run the model to see predictions.</p>
+        </div>
+
+        <p class="about-nums">
+          <strong>About these numbers:</strong> Scores are raw model logits used
+          for ranking, not probabilities. A larger number means the model ranks
+          that movie more highly for this sequence.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ───────────────── 02 · the model ───────────────── -->
+<section class="band">
+  <div class="wrap">
+    <div class="sec-head">
+      <div>
+        <p class="kicker">02 / THE MODEL</p>
+        <h2>One decoder,<br>two kinds of token.</h2>
+      </div>
+      <p class="sec-note">
+        The same decoder class was trained on TinyStories to predict the next
+        word, then trained on MovieLens to predict the next movie. Not a port or
+        an analogy—the identical model code.
       </p>
-    </section>
+    </div>
 
-    <footer class="foot">
-      <p>
-        Trained on MovieLens 1M with the same decoder that writes sentences in
-        <a href="https://github.com/Nwachukwu1300/cudatransformer" target="_blank" rel="noopener">this project</a>'s
-        language model — only the vocabulary changed.
+    <div class="duo">
+      <div class="duo-side">
+        <p class="duo-label">LANGUAGE</p>
+        <div class="toks">
+          <span class="tok">The</span><span class="tok">fox</span><span class="tok">ran</span>
+          <span class="tok tok-hit">home</span>
+        </div>
+        <p class="duo-foot">predict next word</p>
+      </div>
+
+      <div class="duo-core">
+        <div class="core-box">
+          <p class="core-label">DECODER</p>
+          <p class="core-x">4×</p>
+          <p class="core-sub">causal self-attention</p>
+        </div>
+        <p class="core-note">IDENTICAL CODE</p>
+      </div>
+
+      <div class="duo-side">
+        <p class="duo-label">WATCH HISTORY</p>
+        <div class="toks">
+          <span class="tok">Toy Story</span><span class="tok">Aladdin</span><span class="tok">Mulan</span>
+          <span class="tok tok-hit">Lion King</span>
+        </div>
+        <p class="duo-foot">predict next movie</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ───────────────── 03 · how it was built ───────────────── -->
+<section class="band band-dark">
+  <div class="wrap built">
+    <div class="built-copy">
+      <p class="kicker">03 / HOW IT WAS BUILT</p>
+      <h2>No black boxes.</h2>
+      <p class="built-body">
+        Every part of the stack was written by hand to understand what the
+        abstractions hide: CUDA GPU kernels, reverse-mode autograd, multi-head
+        attention, tokenization, the training loop, inference API, and this
+        interface.
       </p>
-    </footer>
-  </main>
+      <a class="built-link" href="https://github.com/Nwachukwu1300/cudatransformer" target="_blank" rel="noopener">
+        Inspect the implementation <span aria-hidden="true">→</span>
+      </a>
+    </div>
 
-  <script src="/app.js"></script>
+    <div class="spec">
+      <div class="spec-head">
+        <span>MODEL SPEC</span><span class="mono">cudatransformer.py</span>
+      </div>
+      <div class="spec-stack">
+        <div class="spec-row"><span>output projection</span><span class="mono dim">[B, T, 3706]</span></div>
+        <div class="spec-row spec-row-rep">
+          <span class="rep">×4</span>
+          <span>masked self-attention</span><span class="mono dim">4 heads</span>
+        </div>
+        <div class="spec-row"><span>token + position embedding</span><span class="mono dim">d_model: 128</span></div>
+        <div class="spec-row spec-row-in"><span>movie ID sequence</span><span class="mono">[B, T]</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ───────────────── 04 · numbers ───────────────── -->
+<section class="band band-white">
+  <div class="wrap">
+    <p class="kicker">04 / BY THE NUMBERS</p>
+    <h2 class="nums-title">Small enough to understand.</h2>
+
+    <div class="grid">
+      <div class="cell"><p class="cell-n">1.7M</p><p class="cell-l">PARAMETERS</p></div>
+      <div class="cell"><p class="cell-n">4 / 4</p><p class="cell-l">LAYERS / ATTENTION HEADS</p></div>
+      <div class="cell"><p class="cell-n">6,040</p><p class="cell-l">MOVIELENS USERS</p></div>
+      <div class="cell"><p class="cell-n">1M</p><p class="cell-l">TRAINING INTERACTIONS</p></div>
+      <div class="cell"><p class="cell-n">3,706</p><p class="cell-l">MOVIES IN CATALOG</p></div>
+      <div class="cell cell-hi"><p class="cell-n">0</p><p class="cell-l">ML FRAMEWORKS USED</p></div>
+    </div>
+
+    <div class="loss">
+      <div class="loss-left">
+        <p class="loss-label">TRAINING LOSS</p>
+        <p class="loss-n">6.46 <span aria-hidden="true">→</span> 4.20</p>
+        <p class="loss-sub">Cross-entropy over the MovieLens 1M training set.</p>
+      </div>
+      <div class="loss-chart">
+        <svg viewBox="0 0 420 132" preserveAspectRatio="none" role="img" aria-label="Training loss curve falling from 6.46 to 4.20">
+          <line x1="0" y1="14"  x2="420" y2="14"  class="gl"/>
+          <line x1="0" y1="66"  x2="420" y2="66"  class="gl"/>
+          <line x1="0" y1="118" x2="420" y2="118" class="gl"/>
+          <path class="loss-fill" d="M0,18 C60,34 92,62 140,78 C196,96 250,104 310,110 C350,113 388,115 420,116 L420,132 L0,132 Z"/>
+          <path class="loss-line" d="M0,18 C60,34 92,62 140,78 C196,96 250,104 310,110 C350,113 388,115 420,116"/>
+          <circle class="loss-dot" cx="418" cy="116" r="3.5"/>
+        </svg>
+        <div class="loss-ax"><span>6.5</span><span>5.5</span><span>4.5</span></div>
+        <div class="loss-x"><span>step 0</span><span>training step →</span><span>step 20k</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ───────────────── footer ───────────────── -->
+<footer class="foot">
+  <div class="wrap foot-inner">
+    <div>
+      <p class="foot-name">next-movie</p>
+      <p class="foot-sub">A from-scratch transformer experiment.</p>
+    </div>
+    <a class="foot-gh" href="https://github.com/Nwachukwu1300/cudatransformer" target="_blank" rel="noopener">
+      <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
+      View on GitHub
+    </a>
+  </div>
+</footer>
+
+<script src="/app.js"></script>
 </body>
 </html>

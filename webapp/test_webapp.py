@@ -97,6 +97,19 @@ def test_recommend_matches_cli(client):
     ]
 
 
+def test_recommend_includes_display_metadata(client):
+    # The UI shows "<title>" with "<year> · <genre> · <genre>" beneath it, so
+    # the API must return the year/genres parsed from movies.dat's third field.
+    resp = client.post("/api/recommend", json={"history": [1, 588, 1907], "top_k": 1})
+    assert resp.status_code == 200
+    top = resp.json()["recommendations"][0]
+    # Known-good: this history's top prediction is The Lion King (1994).
+    assert top["movie_id"] == 364
+    assert top["display"] == "Lion King, The"   # trailing "(1994)" stripped
+    assert top["year"] == "1994"
+    assert "Animation" in top["genres"]
+
+
 def test_recommend_handles_unknown_movie_id_gracefully(client):
     # A movie ID far outside the real MovieLens range -- should fall through
     # to ItemVocab's UNK handling, not raise a 500.

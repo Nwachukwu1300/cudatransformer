@@ -29,6 +29,11 @@ class Recommendation(BaseModel):
     movie_id: int
     title: str
     score: float
+    # Presentation-only metadata from movies.dat, shown under each result.
+    # `display` is the title with the trailing "(year)" stripped.
+    display: str = ""
+    year: str = ""
+    genres: List[str] = []
 
 
 class RecommendResponse(BaseModel):
