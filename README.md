@@ -35,6 +35,42 @@ That's the whole point. A next-word predictor and a next-movie recommender
 are the same math problem wearing different labels — and this repo is the
 proof, not just the claim.
 
+## 🚀 Try the Live Product
+
+The transformer is deployed as a working movie recommendation application.
+
+**[→ Try the live recommender](https://cudatransformer-recommender.onrender.com/)**
+
+Enter a few movies from your watch history and the model predicts what you are most likely to watch next.
+
+The application runs the same transformer architecture trained on MovieLens 1M, with 1.7M parameters, 4 decoder layers, 4 attention heads, and 3,706 movie tokens.
+
+### How it works
+
+```text
+Your watch history or favourite movies
+        ↓
+Movie ID sequence
+        ↓
+Token + positional embeddings
+        ↓
+4-layer causal transformer
+        ↓
+Next-token prediction
+        ↓
+Top 5 movie recommendations
+```
+
+The interesting part is that this is the same decoder architecture used for the language modelling experiment. The only thing that changes is what the tokens represent.
+
+**Language model:** predict the next word
+
+**Recommender:** predict the next movie
+
+The complete implementation, training pipeline, benchmarks, and CUDA kernels are available in this repository.
+
+
+
 ## What's actually in here
 
 ```mermaid
